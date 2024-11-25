@@ -1,0 +1,179 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: ../organizations/ordererOrganizations/fashion.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.fashion.com:7050
+
+  - &supplier
+    Name: supplierMSP
+    ID: supplierMSP
+    MSPDir: ../organizations/peerOrganizations/supplier.fashion.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('supplierMSP.admin', 'supplierMSP.peer', 'supplierMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('supplierMSP.admin', 'supplierMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('supplierMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('supplierMSP.peer')"
+  
+  - &manufacturer
+    Name: manufacturerMSP
+    ID: manufacturerMSP
+    MSPDir: ../organizations/peerOrganizations/manufacturer.fashion.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('manufacturerMSP.admin', 'manufacturerMSP.peer', 'manufacturerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('manufacturerMSP.admin', 'manufacturerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('manufacturerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('manufacturerMSP.peer')"
+
+  - &retailer
+    Name: retailerMSP
+    ID: retailerMSP
+    MSPDir: ../organizations/peerOrganizations/retailer.fashion.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('retailerMSP.admin', 'retailerMSP.peer', 'retailerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('retailerMSP.admin', 'retailerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('retailerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('retailerMSP.peer')"
+
+  - &validator
+    Name: validatorMSP
+    ID: validatorMSP
+    MSPDir: ../organizations/peerOrganizations/validator.fashion.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('validatorMSP.admin', 'validatorMSP.peer', 'validatorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('validatorMSP.admin', 'validatorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('validatorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('validatorMSP.peer')"
+
+Capabilities:  
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+    
+Application: &ApplicationDefaults
+  Organizations: []
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  Addresses:
+    - orderer.fashion.com:7050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations: []
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  ChannelUsingRaft:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      OrdererType: etcdraft
+      EtcdRaft:
+        Consenters:
+          - Host: orderer.fashion.com
+            Port: 7050
+            ClientTLSCert: ../organizations/ordererOrganizations/fashion.com/orderers/orderer.fashion.com/tls/server.crt
+            ServerTLSCert: ../organizations/ordererOrganizations/fashion.com/orderers/orderer.fashion.com/tls/server.crt
+      Organizations:
+        - *OrdererOrg
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *supplier
+        - *manufacturer
+        - *retailer
+        - *validator
+      Capabilities: *ApplicationCapabilities
